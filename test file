@@ -1,0 +1,35 @@
+module Token {
+    // 定义一个资源类型 `Balance`
+    resource struct Balance {
+        value: u64,
+    }
+
+    // 初始化账户时创建一个 `Balance` 资源
+    public fun initialize_account(account: &signer) {
+        move_to(account, Balance { value: 0 });
+    }
+
+    // 获取账户余额
+    public fun get_balance(account: &signer): u64 {
+        let balance = borrow_global<Balance>(signer::address_of(account));
+        balance.value
+    }
+
+    // 转账函数
+    public fun transfer(from: &signer, to: address, amount: u64) {
+        // 确保发送方有足够余额
+        let sender_balance = borrow_global_mut<Balance>(signer::address_of(from));
+        assert!(sender_balance.value >= amount, 1); // 错误码 1 表示余额不足
+
+        // 减少发送方余额
+        sender_balance.value -= amount;
+
+        // 增加接收方余额
+        if (!exists<Balance>(to)) {
+            move_to(&signer::create_child_signer(from, to), Balance { value: 0 });
+        }
+        let receiver_balance = borrow_global_mut<Balance>(to);
+        receiver_balance.value += amount;
+    }
+}
+
